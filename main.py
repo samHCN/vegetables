@@ -7,7 +7,7 @@ from flask import Flask, jsonify, request, send_file, send_from_directory
 # Get your Gemini API key by:
 # - Selecting "Add Gemini API" in the "Project IDX" panel in the sidebar
 # - Or by visiting https://g.co/ai/idxGetGeminiKey
-API_KEY = 'AIzaSyCjFPW-i1rRx7d_po2VZxUElDaBaEancno'
+API_KEY = ''
 
 genai.configure(api_key=API_KEY)
 
