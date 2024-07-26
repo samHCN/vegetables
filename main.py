@@ -7,7 +7,7 @@ from flask import Flask, jsonify, request, send_file, send_from_directory
 # Get your Gemini API key by:
 # - Selecting "Add Gemini API" in the "Project IDX" panel in the sidebar
 # - Or by visiting https://g.co/ai/idxGetGeminiKey
-API_KEY = 'AIzaSyCjFPW-i1rRx7d_po2VZxUElDaBaEancno'
+API_KEY = 'AIzaSyAH17rAIUWAT17_jihVOZXiBUKbcrv2D4w'
 
 genai.configure(api_key=API_KEY)
 
@@ -49,43 +49,6 @@ def serve_static(path):
 
 
 if __name__ == "__main__":
-    app.run(port=int(os.environ.get('PORT', 80)))
+    app.run(port=int(os.environ.get('PORT', 9000)))
 
-def generate_image_with_imagen(prompt, api_key):
-    """
-    Generates an image using the Imagen API.
 
-    Args:
-        prompt: The text prompt to generate an image from.
-        api_key: Your Imagen API key.
-
-    Returns:
-        A dictionary containing the generated image data or an error message.
-    """
-
-    genai.configure(api_key=api_key)
-
-    try:
-        model = genai.GenerativeModel('imagen') 
-        response = model.generate_content(
-            [
-                genai.Input(text=prompt)
-            ]
-        )
-
-        # Assuming the response contains a single image
-        image_data = response.candidates[0].artifacts[0].base64
-
-        return {"image_data": image_data}
-
-    except Exception as e:
-        return {"error": f"An error occurred: {str(e)}"}
-
-# Example usage:
-result = generate_image_with_imagen("A cute cat wearing a hat", "YOUR_API_KEY")
-if "error" in result:
-    print(result["error"])
-else:
-    # Process the image data (e.g., save it to a file)
-    print("Image generated successfully!")
-    # ...
