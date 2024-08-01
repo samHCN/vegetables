@@ -1,3 +1,47 @@
+from flask import Flask, request, jsonify
+from PIL import Image
+from io import BytesIO
+import google.cloud.vision as vision
+
+app = Flask(__name__)
+
+# Initialize Google Cloud Vision client (replace 'YOUR_PROJECT_ID' with your project ID)
+client = vision.ImageAnnotatorClient()
+
+@app.route('/upload', methods=['POST'])
+def upload_image():
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image part'}), 400
+
+    image_file = request.files['image']
+    image = Image.open(image_file.stream)
+
+    # Convert image to bytes for Cloud Vision API
+    img_byte_arr = BytesIO()
+    image.save(img_byte_arr, format='PNG')
+    img_byte_arr = img_byte_arr.getvalue()
+
+    # Analyze image with Cloud Vision API
+    response = client.annotate_image({
+        'image': {'content': img_byte_arr},
+        'features': [
+            {'type_': vision.Feature.Type.LABEL_DETECTION},
+            {'type_': vision.Feature.Type.TEXT_DETECTION},
+            # Add more features as needed (e.g., object detection, face detection)
+        ]
+    })
+
+    # Extract information from response
+    labels = [label.description for label in response.label_annotations]
+    text = response.full_text_annotation.text
+
+    # Store image (replace with your preferred storage method)
+    # image.save('uploads/' + image_file.filename)
+
+    return jsonify({'labels': labels, 'text': text}), 200
+
+if __name__ == '__main__':
+    app.run(debug=True)
 import json
 import os
 import google.generativeai as genai
