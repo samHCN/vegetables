@@ -6,3 +6,6 @@ autopep8
 google-generativeai # Client library for the Gemini API
 Pillow # PIL image-loading library
 flask
+google-cloud-vision # Google Cloud Vision API client library
+
+
