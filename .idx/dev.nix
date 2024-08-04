@@ -7,6 +7,7 @@
     pkgs.python3
     pkgs.python311Packages.pip
     pkgs.lighthouse
+    pkgs.flutter
   ];
   # Sets environment variables in the workspace
   env = {};
