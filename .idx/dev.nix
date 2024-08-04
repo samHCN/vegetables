@@ -6,6 +6,7 @@
   packages = [
     pkgs.python3
     pkgs.python311Packages.pip
+    pkgs.lighthouse
   ];
   # Sets environment variables in the workspace
   env = {};
