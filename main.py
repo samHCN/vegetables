@@ -5,6 +5,71 @@ import google.generativeai as genai
 from PIL import Image
 from io import BytesIO
 import google.cloud.vision as vision
+import googlemaps
+from google.cloud import aiplatform
+
+
+
+app = Flask(__name__)
+
+# Initialize the Gemini API client
+aiplatform.init(project='lateral-avatar-413022', location='us-central1')
+
+# Get the API key from the environment variable
+google_maps_api_key = os.environ.get('GOOGLE_MAPS_API_KEY')
+GOOGLE_MAPS_API_KEY = 'AIzaSyA83ck6KcIoy4bY2cE7dXkDzd6lzXwr8Sc'
+
+# Initialize the Google Maps Places API client
+gmaps = googlemaps.Client(key='AIzaSyA83ck6KcIoy4bY2cE7dXkDzd6lzXwr8Sc')
+
+@app.route('/api/restaurants', methods=['POST'])
+def get_restaurants():
+    location = request.json.get('location')
+    if not location:
+        return jsonify({'error': 'Missing location'}), 400
+
+    # Use the Google Maps Places API to search for restaurants
+    places_result = gmaps.places_nearby(
+        location=location,
+        type='restaurant',
+        radius=5000  # Search within a 5km radius
+    )
+
+    restaurants = []
+    for place in places_result['results']:
+        restaurants.append({
+            'name': place['name'],
+            'place_id': place['place_id'],
+            'address': place['vicinity'],
+            'rating': place['rating']
+        })
+
+    return jsonify({'restaurants': restaurants})
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    message = request.json.get('message')
+    restaurant_name = request.json.get('restaurant_name')  # Get restaurant context
+
+    if not message or not restaurant_name:
+        return jsonify({'error': 'Missing message or restaurant name'}), 400
+
+@app.route('/api/generate_text', methods=['POST'])
+def generate_text():
+    prompt = request.json.get('prompt')
+    if not prompt:
+        return jsonify({'error': 'Missing prompt'}), 400
+
+    # Use the Gemini API to generate text
+    endpoint = aiplatform.Endpoint('your-endpoint-name')
+    response = endpoint.predict(instances=[{'text': prompt}])
+    generated_text = response.predictions[0]['text']
+
+    return jsonify({'text': generated_text})
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
 
 # 🔥🔥 FILL THIS OUT FIRST! 🔥🔥
 # Get your Gemini API key by:

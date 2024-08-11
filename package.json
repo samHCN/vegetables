@@ -1,0 +1,13 @@
+{
+  "devDependencies": {
+    "@types/google.maps": "^3.55.12",
+    "@types/node": "^22.2.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "googleapis": "^140.0.1",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.0"
+  }
+}
