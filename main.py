@@ -17,10 +17,10 @@ aiplatform.init(project='lateral-avatar-413022', location='us-central1')
 
 # Get the API key from the environment variable
 google_maps_api_key = os.environ.get('GOOGLE_MAPS_API_KEY')
-GOOGLE_MAPS_API_KEY = 'AIzaSyA83ck6KcIoy4bY2cE7dXkDzd6lzXwr8Sc'
+GOOGLE_MAPS_API_KEY = ''
 
 # Initialize the Google Maps Places API client
-gmaps = googlemaps.Client(key='AIzaSyA83ck6KcIoy4bY2cE7dXkDzd6lzXwr8Sc')
+gmaps = googlemaps.Client(key='')
 
 @app.route('/api/restaurants', methods=['POST'])
 def get_restaurants():
