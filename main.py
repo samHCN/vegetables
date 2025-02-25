@@ -2,7 +2,10 @@ import json
 import os
 import google.generativeai as genai
 from flask import Flask, jsonify, request, send_file, send_from_directory
+import logging
 
+# Configure logging
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s %(levelname)s %(message)s')
 # 🔥🔥 FILL THIS OUT FIRST! 🔥🔥
 # Get your Gemini API key by:
 # - Selecting "Add Gemini API" in the "Project IDX" panel in the sidebar
@@ -40,7 +43,8 @@ def generate_api():
             return stream(), {'Content-Type': 'text/event-stream'}
 
         except Exception as e:
-            return jsonify({ "error": str(e) })
+            logging.error("An error occurred: %s", str(e))
+            return jsonify({ "error": "An internal error has occurred!" })
 
 
 @app.route('/<path:path>')
