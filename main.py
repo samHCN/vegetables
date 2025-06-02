@@ -8,19 +8,24 @@ import google.cloud.vision as vision
 import googlemaps
 from google.cloud import aiplatform
 
-
-
+# Initialize Flask App
 app = Flask(__name__)
 
-# Initialize the Gemini API client
+# Initialize Google Cloud clients
+# Gemini API client
 aiplatform.init(project='lateral-avatar-413022', location='us-central1')
+# Google Cloud Vision client
+client = vision.ImageAnnotatorClient() # (replace 'YOUR_PROJECT_ID' with your project ID) - project id seems to be set by aiplatform.init, so this comment might be outdated
 
-# Get the API key from the environment variable
+# API Key Configuration
+# Google Maps API Key
 google_maps_api_key = os.environ.get('GOOGLE_MAPS_API_KEY')
-GOOGLE_MAPS_API_KEY = ''
+gmaps = googlemaps.Client(key=google_maps_api_key)
 
-# Initialize the Google Maps Places API client
-gmaps = googlemaps.Client(key='')
+# Gemini API Key
+API_KEY = os.environ.get('GEMINI_API_KEY')
+genai.configure(api_key=API_KEY)
+
 
 @app.route('/api/restaurants', methods=['POST'])
 def get_restaurants():
@@ -48,6 +53,8 @@ def get_restaurants():
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
+    # TODO: This route is currently a placeholder and needs full implementation
+    # to handle chat logic with restaurant context.
     message = request.json.get('message')
     restaurant_name = request.json.get('restaurant_name')  # Get restaurant context
 
@@ -61,29 +68,14 @@ def generate_text():
         return jsonify({'error': 'Missing prompt'}), 400
 
     # Use the Gemini API to generate text
+    # TODO: Replace 'your-endpoint-name' with your actual deployed Vertex AI Endpoint name.
     endpoint = aiplatform.Endpoint('your-endpoint-name')
     response = endpoint.predict(instances=[{'text': prompt}])
     generated_text = response.predictions[0]['text']
 
     return jsonify({'text': generated_text})
 
-if __name__ == '__main__':
-    app.run(debug=True)
-
-
-# 🔥🔥 FILL THIS OUT FIRST! 🔥🔥
-# Get your Gemini API key by:
-# - Selecting "Add Gemini API" in the "Project IDX" panel in the sidebar
-# - Or by visiting https://g.co/ai/idxGetGeminiKey
-API_KEY = ''
-
-genai.configure(api_key=API_KEY)
-
-app = Flask(__name__)
-
-# Initialize Google Cloud Vision client (replace 'YOUR_PROJECT_ID' with your project ID)
-client = vision.ImageAnnotatorClient()
-
+# Serve the main index page
 @app.route("/")
 def index():
     return send_file('web/index.html')
@@ -91,12 +83,12 @@ def index():
 @app.route("/api/generate", methods=["POST"])
 def generate_api():
     if request.method == "POST":
-        if API_KEY == 'TODO':
+        if not API_KEY: # Check if API_KEY is not set (empty or None)
             return jsonify({ "error": '''
-                To get started, get an API key at
-                https://g.co/ai/idxGetGeminiKey and enter it in
-                main.py
-                '''.replace('\n', '') })
+                To get started, get an API key for Gemini at
+                https://g.co/ai/idxGetGeminiKey and set it as an environment variable named GEMINI_API_KEY.
+                Then, add the environment variable to your run configuration in Project IDX.
+                '''.replace('\n', '').strip() })
         try:
             req_body = request.get_json()
             content = req_body.get("contents")
@@ -147,5 +139,5 @@ def upload_image():
 
     return jsonify({'labels': labels, 'text': text}), 200
 
-if __name__ == "__main__":
-    app.run(port=int(os.environ.get('PORT', 9000)))
+if __name__ == '__main__': # Consolidated main execution block
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)), debug=True)

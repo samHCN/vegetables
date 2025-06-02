@@ -40,6 +40,6 @@ form.onsubmit = async (ev) => {
       output.innerHTML = md.render(buffer.join(''));
     }
   } catch (e) {
-    output.innerHTML += '<hr>' + e;
+    output.innerHTML = `<p style="color: red;">An error occurred: ${e.message}</p><hr>Previous content may be incomplete.`;
   }
 };
