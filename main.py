@@ -7,23 +7,35 @@ from io import BytesIO
 import google.cloud.vision as vision
 import googlemaps
 from google.cloud import aiplatform
-
-
+from google.cloud import firestore
 
 app = Flask(__name__)
 
-# Initialize the Gemini API client
+# Initialize Google Cloud services
 aiplatform.init(project='lateral-avatar-413022', location='us-central1')
+client = vision.ImageAnnotatorClient() # For Vision API
+db = firestore.Client() # For Firestore
 
-# Get the API key from the environment variable
+# API Keys
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 google_maps_api_key = os.environ.get('GOOGLE_MAPS_API_KEY')
-GOOGLE_MAPS_API_KEY = ''
 
-# Initialize the Google Maps Places API client
-gmaps = googlemaps.Client(key='')
+# Initialize Google Maps Places API client
+if not google_maps_api_key:
+    print("Warning: GOOGLE_MAPS_API_KEY is not set. The /api/restaurants endpoint may not work as expected.")
+gmaps = googlemaps.Client(key=google_maps_api_key)
+
+# Configure Gemini API
+if GEMINI_API_KEY and GEMINI_API_KEY != 'TODO':
+    genai.configure(api_key=GEMINI_API_KEY)
+else:
+    print("Warning: GEMINI_API_KEY is not set or is 'TODO'. The /api/generate endpoint will not work.")
 
 @app.route('/api/restaurants', methods=['POST'])
 def get_restaurants():
+    if not google_maps_api_key:
+        return jsonify({'error': 'Google Maps API key not configured'}), 500
+
     location = request.json.get('location')
     if not location:
         return jsonify({'error': 'Missing location'}), 400
@@ -46,43 +58,52 @@ def get_restaurants():
 
     return jsonify({'restaurants': restaurants})
 
-@app.route('/api/chat', methods=['POST'])
-def chat():
-    message = request.json.get('message')
-    restaurant_name = request.json.get('restaurant_name')  # Get restaurant context
+@app.route('/api/chat', methods=['POST', 'GET'])
+def chat_api():
+    if request.method == 'POST':
+        data = request.get_json()
+        user_id = data.get('user_id')
+        text = data.get('text')
 
-    if not message or not restaurant_name:
-        return jsonify({'error': 'Missing message or restaurant name'}), 400
+        if not user_id or not text:
+            return jsonify({'error': 'Missing user_id or text'}), 400
 
-@app.route('/api/generate_text', methods=['POST'])
-def generate_text():
-    prompt = request.json.get('prompt')
-    if not prompt:
-        return jsonify({'error': 'Missing prompt'}), 400
+        chat_ref = db.collection('chats').document()
+        chat_ref.set({
+            'user_id': user_id,
+            'text': text,
+            'timestamp': firestore.SERVER_TIMESTAMP
+        })
+        return jsonify({'success': True, 'message_id': chat_ref.id}), 201
+    
+    elif request.method == 'GET':
+        messages_query = db.collection('chats').order_by('timestamp', direction=firestore.Query.DESCENDING).limit(20)
+        messages = []
+        for doc in messages_query.stream():
+            msg = doc.to_dict()
+            msg['id'] = doc.id
+            # Convert timestamp to string if needed for JSON serialization
+            if msg.get('timestamp') and hasattr(msg['timestamp'], 'isoformat'):
+                 msg['timestamp'] = msg['timestamp'].isoformat()
+            elif msg.get('timestamp'):
+                 msg['timestamp'] = str(msg['timestamp'])
+            messages.append(msg)
+        messages.reverse() # To get them in chronological order
+        return jsonify(messages), 200
 
-    # Use the Gemini API to generate text
-    endpoint = aiplatform.Endpoint('your-endpoint-name')
-    response = endpoint.predict(instances=[{'text': prompt}])
-    generated_text = response.predictions[0]['text']
-
-    return jsonify({'text': generated_text})
-
-if __name__ == '__main__':
-    app.run(debug=True)
-
-
-# 🔥🔥 FILL THIS OUT FIRST! 🔥🔥
-# Get your Gemini API key by:
-# - Selecting "Add Gemini API" in the "Project IDX" panel in the sidebar
-# - Or by visiting https://g.co/ai/idxGetGeminiKey
-API_KEY = ''
-
-genai.configure(api_key=API_KEY)
-
-app = Flask(__name__)
-
-# Initialize Google Cloud Vision client (replace 'YOUR_PROJECT_ID' with your project ID)
-client = vision.ImageAnnotatorClient()
+# TODO: This requires a valid Vertex AI endpoint and further setup.
+# @app.route('/api/generate_text', methods=['POST'])
+# def generate_text():
+#     prompt = request.json.get('prompt')
+#     if not prompt:
+#         return jsonify({'error': 'Missing prompt'}), 400
+#
+#     # Use the Gemini API to generate text
+#     endpoint = aiplatform.Endpoint('your-endpoint-name')
+#     response = endpoint.predict(instances=[{'text': prompt}])
+#     generated_text = response.predictions[0]['text']
+#
+#     return jsonify({'text': generated_text})
 
 @app.route("/")
 def index():
@@ -91,12 +112,13 @@ def index():
 @app.route("/api/generate", methods=["POST"])
 def generate_api():
     if request.method == "POST":
-        if API_KEY == 'TODO':
+        if not GEMINI_API_KEY or GEMINI_API_KEY == 'TODO':
             return jsonify({ "error": '''
-                To get started, get an API key at
-                https://g.co/ai/idxGetGeminiKey and enter it in
-                main.py
-                '''.replace('\n', '') })
+                To get started, get an API key by selecting "Add Gemini API" 
+                in the "Project IDX" panel in the sidebar or by visiting 
+                https://g.co/ai/idxGetGeminiKey and set it as the GEMINI_API_KEY
+                environment variable.
+                '''.replace('\n', '').replace('                ', ' ') })
         try:
             req_body = request.get_json()
             content = req_body.get("contents")
@@ -111,7 +133,7 @@ def generate_api():
         except Exception as e:
             return jsonify({ "error": str(e) })
 
-@app.route('/<path:path>')
+# Serve static files from 'web' directory
 def serve_static(path):
     return send_from_directory('web', path)
 
@@ -148,4 +170,4 @@ def upload_image():
     return jsonify({'labels': labels, 'text': text}), 200
 
 if __name__ == "__main__":
-    app.run(port=int(os.environ.get('PORT', 9000)))
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)), debug=True)
